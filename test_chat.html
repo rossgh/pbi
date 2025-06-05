@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test Azure GPT-4o Chat</title>
+</head>
+<body>
+  <h2>Test Azure GPT-4o Chat Endpoint</h2>
+  <form id="chatForm">
+    <label for="message">Message:</label><br>
+    <input type="text" id="message" name="message" value="Hello"><br><br>
+    <input type="submit" value="Send">
+  </form>
+  <pre id="response"></pre>
+
+  <script>
+    document.getElementById("chatForm").addEventListener("submit", async function(e) {
+      e.preventDefault();
+      const message = document.getElementById("message").value;
+      const response = await fetch("https://copilot-voice-api-d8cue9bah3ezaegb.centralus-01.azurewebsites.net/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message })
+      });
+      const data = await response.json();
+      document.getElementById("response").textContent = JSON.stringify(data, null, 2);
+    });
+  </script>
+</body>
+</html>
