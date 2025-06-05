@@ -3,12 +3,19 @@ from openai import AzureOpenAI
 
 app = Flask(__name__)
 
+# Azure OpenAI client configuration
 client = AzureOpenAI(
     api_version="2025-01-01-preview",
     azure_endpoint="https://airesource0741003294.cognitiveservices.azure.com/",
     api_key="7fbe5a6483c14035a1a99ca22a679327"
 )
 
+# Root route to confirm app is running
+@app.route("/", methods=["GET"])
+def home():
+    return "Azure App is running. Use POST /chat to interact with the model."
+
+# Chat endpoint to interact with Azure OpenAI
 @app.route("/chat", methods=["POST"])
 def chat():
     user_input = request.json.get("message", "")
