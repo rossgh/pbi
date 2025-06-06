@@ -50,7 +50,7 @@
       log("Recognized speech: " + text);
 
       try {
-        const response = await fetch("https://copilot-voice-api.azurewebsites.net/chat", {
+        const response = await fetch("/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ message: text })
@@ -62,16 +62,11 @@
         const reply = data.response || "No response from server.";
         botResponseSpan.textContent = reply;
 
-        const ttsResponse = await fetch("https://eastus2.tts.speech.microsoft.com/cognitiveservices/v1", {
+        // Call your own backend /speak endpoint
+        const ttsResponse = await fetch("/speak", {
           method: "POST",
-          headers: {
-            "Ocp-Apim-Subscription-Key": "BxZhEDQUmw7jLFBHrlYXRsPNDk7ZVyh4LRLTVrJ6rq64Qb94q75AJQQJ99BFAC8vTInXJ3w3AAAYACOGWe7X",
-            "Content-Type": "application/ssml+xml",
-            "X-Microsoft-OutputFormat": "audio-16khz-32kbitrate-mono-mp3"
-          },
-          body: `<speak version='1.0' xml:lang='en-US'>
-                   <voice xml:lang='en-US' xml:gender='Female' name='en-US-JennyNeural'>${reply}</voice>
-                 </speak>`
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: reply })
         });
 
         const ttsBlob = await ttsResponse.blob();
