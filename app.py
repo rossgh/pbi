@@ -1,14 +1,15 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+import requests
 from openai import AzureOpenAI
 
 app = Flask(__name__)
 CORS(app)
 
 client = AzureOpenAI(
-    api_version="2024-12-01-preview",  # or 2025-01-01-preview if you've been using that
+    api_version="2024-12-01-preview",
     azure_endpoint="https://airesource0741003294.cognitiveservices.azure.com/",
-    api_key="7fbe5a6483c14035a1a99ca22a679327"  # Paste from portal (Key1)
+    api_key="7fbe5a6483c14035a1a99ca22a679327"
 )
 
 @app.route("/", methods=["GET"])
@@ -30,7 +31,7 @@ def chat():
             max_tokens=4096,
             temperature=1.0,
             top_p=1.0,
-            model="gpt-4o"  # This must match your deployment name exactly
+            model="gpt-4o"
         )
 
         reply = response.choices[0].message.content
@@ -38,8 +39,6 @@ def chat():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-import requests
-from flask import request, jsonify
 
 @app.route("/speak", methods=["POST"])
 def speak():
