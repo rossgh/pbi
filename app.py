@@ -1,3 +1,4 @@
+
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from openai import AzureOpenAI
@@ -6,19 +7,16 @@ import os
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all domains
 
-# Azure OpenAI client configuration
 client = AzureOpenAI(
     api_version="2025-01-01-preview",
     azure_endpoint="https://airesource0741003294.cognitiveservices.azure.com/",
-    api_key=os.environ.get("AZURE_OPENAI_KEY", "your-fallback-api-key-here")  # optional fallback
+    api_key=os.environ.get("AZURE_OPENAI_KEY", "your-fallback-api-key-here")
 )
 
-# Root route to confirm app is running
 @app.route("/", methods=["GET"])
 def home():
     return "Azure App is running. Use POST /chat to interact with the model."
 
-# Chat endpoint to interact with Azure OpenAI
 @app.route("/chat", methods=["POST"])
 def chat():
     try:
