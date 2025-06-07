@@ -6,59 +6,67 @@
     body {
       font-family: Arial, sans-serif;
       background-color: #f0f4f8;
-      text-align: center;
-      padding: 30px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
     }
     #micBtn {
-      font-size: 40px;
-      padding: 20px;
-      border-radius: 50%;
-      border: none;
       background-color: #4CAF50;
+      border: none;
       color: white;
+      padding: 20px;
+      font-size: 24px;
+      border-radius: 50%;
       cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    #micBtn:hover {
+      background-color: #45a049;
     }
     #micBtn.end {
       background-color: #f44336;
     }
-    select {
-      font-size: 16px;
-      margin-top: 10px;
+    #micBtn.end:hover {
+      background-color: #d32f2f;
     }
     #userText, #botResponse {
+      margin-top: 20px;
+      font-size: 18px;
       font-weight: bold;
-      margin: 20px auto;
       max-width: 600px;
-      font-size: 20px;
+      text-align: center;
     }
     #log {
+      margin-top: 20px;
       background: #fff;
-      border: 1px solid #ccc;
-      margin: 0 auto;
-      max-width: 600px;
-      text-align: left;
       padding: 10px;
+      border: 1px solid #ccc;
+      max-width: 600px;
       white-space: pre-wrap;
+    }
+    #voiceSelect {
+      margin-top: 20px;
+      padding: 5px;
+      font-size: 16px;
     }
     #version {
       font-size: 12px;
       color: #888;
-      margin-top: 20px;
+      margin-top: 10px;
     }
   </style>
 </head>
 <body>
-  <h2>🎤 Voice Chat with Azure GPT-4o + Neural TTS</h2>
   <button id="micBtn">🎤</button>
-  <div>
-    🔊 Voice:
-    <select id="voiceSelect">
-      <option value="en-US-AndrewMultilingualNeural">Andrew</option>
-      <option value="en-US-JennyNeural">Jenny</option>
-      <option value="en-US-GuyNeural">Guy</option>
-      <option value="en-US-AriaNeural">Aria</option>
-    </select>
-  </div>
+  <select id="voiceSelect">
+    <option value="en-US-AndrewMultilingualNeural">Andrew</option>
+    <option value="en-US-JennyNeural">Jenny</option>
+    <option value="en-GB-RyanNeural">Ryan (UK)</option>
+    <option value="en-IN-NeerjaNeural">Neerja (India)</option>
+  </select>
   <div id="userText">You said: ...</div>
   <div id="botResponse">Response: ...</div>
   <div id="log"><strong>Debug Log:</strong>\n</div>
@@ -66,8 +74,6 @@
 
   <script>
     const backendUrl = "https://copilot-voice-api-d8cue9bah3ezaegb.centralus-01.azurewebsites.net";
-    const subscriptionKey = "CvfyBJcFIkwFoTa7OS23Rcbmp8s1Z8kuunMmoff7YC3GTKHo4MzGJQQJ99BFACHYHv6XJ3w3AAAYACOGIfBa";
-
     const micBtn = document.getElementById("micBtn");
     const voiceSelect = document.getElementById("voiceSelect");
     const userTextSpan = document.getElementById("userText");
@@ -136,17 +142,13 @@
         botResponseSpan.textContent = "Response: " + reply;
         log("🤖 Received reply: " + reply);
 
-        const ssml = `
-          <speak version='1.0' xml:lang='en-US'>
-            <voice xml:lang='en-US' name='${voiceSelect.value}'>
-              ${reply.replace(/[\#\*]+/g, "")}
-            </voice>
-          </speak>`;
-
         const ttsResponse = await fetch(`${backendUrl}/speak`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: ssml })
+          body: JSON.stringify({
+            text: reply.replace(/[\#\*]+/g, ""),
+            voice: voiceSelect.value
+          })
         });
 
         const ttsBlob = await ttsResponse.blob();
