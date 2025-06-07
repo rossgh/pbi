@@ -1,11 +1,12 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import requests
 from openai import AzureOpenAI
+import requests
 
 app = Flask(__name__)
 CORS(app)
 
+# Azure OpenAI setup
 client = AzureOpenAI(
     api_version="2024-12-01-preview",
     azure_endpoint="https://airesource0741003294.cognitiveservices.azure.com/",
@@ -28,7 +29,7 @@ def chat():
                 {"role": "system", "content": "You are a helpful assistant."},
                 {"role": "user", "content": user_input}
             ],
-            max_tokens=4096,
+            max_tokens=2048,
             temperature=1.0,
             top_p=1.0,
             model="gpt-4o"
@@ -44,6 +45,8 @@ def chat():
 def speak():
     try:
         text = request.json.get("text", "")
+        voice = request.json.get("voice", "en-US-AndrewMultilingualNeural")
+
         if not text:
             return jsonify({"error": "No text provided"}), 400
 
@@ -56,7 +59,7 @@ def speak():
 
         ssml = f"""
         <speak version='1.0' xml:lang='en-US'>
-               <voice xml:lang='en-US' xml:gender='Male' name='en-US-AndrewMultilingualNeural'>
+            <voice xml:lang='en-US' name='{voice}'>
                 {text}
             </voice>
         </speak>

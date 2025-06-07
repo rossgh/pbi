@@ -4,27 +4,21 @@
   <title>Voice Chat with Azure GPT-4o + Azure TTS</title>
   <style>
     body { font-family: Arial, sans-serif; padding: 20px; }
-    button { font-size: 16px; margin: 5px; }
+    button, select { font-size: 16px; margin: 5px; }
     #userText, #botResponse { font-weight: bold; }
-    #log { margin-top: 20px; background: #f9f9f9; padding: 10px; border: 1px solid #ccc; white-space: pre-wrap; height: 150px; overflow-y: auto; }
-    #micIndicator { display: inline-block; width: 10px; height: 10px; margin-left: 10px; border-radius: 50%; background: gray; animation: none; }
-    #micIndicator.listening { background: red; animation: blink 1s infinite; }
-    @keyframes blink {
-      50% { opacity: 0.2; }
-    }
+    #log { margin-top: 20px; background: #f9f9f9; padding: 10px; border: 1px solid #ccc; white-space: pre-wrap; }
   </style>
 </head>
 <body>
   <h2>🎤 Voice Chat with Azure GPT-4o + Azure Neural TTS</h2>
   <button id="start">Start Speaking</button>
   <button id="cancelSpeech">🛑 Stop Talking</button>
-  <label for="voiceSelect">🔊 Voice:</label>
+  🔊 Voice: 
   <select id="voiceSelect">
     <option value="en-US-AndrewMultilingualNeural">Andrew</option>
     <option value="en-US-JennyNeural">Jenny</option>
+    <option value="en-GB-RyanNeural">Ryan (UK)</option>
   </select>
-  <span id="micIndicator" title="Mic status"></span>
-
   <p><strong>You said:</strong> <span id="userText">...</span></p>
   <p><strong>Response:</strong> <span id="botResponse">...</span></p>
   <div id="log"><strong>Debug Log:</strong>\n</div>
@@ -32,11 +26,10 @@
   <script>
     const startBtn = document.getElementById("start");
     const cancelBtn = document.getElementById("cancelSpeech");
+    const voiceSelect = document.getElementById("voiceSelect");
     const userTextSpan = document.getElementById("userText");
     const botResponseSpan = document.getElementById("botResponse");
     const logDiv = document.getElementById("log");
-    const voiceSelect = document.getElementById("voiceSelect");
-    const micIndicator = document.getElementById("micIndicator");
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
@@ -44,73 +37,47 @@
     recognition.interimResults = false;
     recognition.continuous = true;
 
-    let isListening = false;
-
     function log(msg) {
       logDiv.textContent += `\n${msg}`;
-      logDiv.scrollTop = logDiv.scrollHeight;
-    }
-
-    function cleanTextForTTS(text) {
-      return text
-        .replace(/[#*_`~>-]/g, '')
-        .replace(/\n+/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
     }
 
     startBtn.onclick = () => {
-      if (!isListening) {
-        recognition.start();
-        isListening = true;
-        micIndicator.classList.add("listening");
-        log("🎙️ Speech recognition started...");
-      }
+      recognition.start();
+      log("🎙️ Speech recognition started...");
     };
 
     cancelBtn.onclick = () => {
-      recognition.stop();
       window.speechSynthesis.cancel();
-      isListening = false;
-      micIndicator.classList.remove("listening");
+      recognition.stop();
       log("🛑 Speech recognition and synthesis stopped.");
     };
 
     recognition.onresult = async (event) => {
-      const text = event.results[0][0].transcript;
+      const text = event.results[event.results.length - 1][0].transcript;
       userTextSpan.textContent = text;
       log("Recognized speech: " + text);
-      window.speechSynthesis.cancel();
 
       try {
-        const response = await fetch("https://copilot-voice-api.azurewebsites.net/chat", {
+        const chatRes = await fetch("/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ message: text })
         });
 
-        const data = await response.json();
-        log("🧠 GPT response: " + JSON.stringify(data));
+        const data = await chatRes.json();
+        log("✅ Received response: " + JSON.stringify(data));
 
         const reply = data.response || "No response from server.";
-        const cleaned = cleanTextForTTS(reply);
-        botResponseSpan.textContent = cleaned;
+        botResponseSpan.textContent = reply;
 
-        const selectedVoice = voiceSelect.value;
-
-        const ttsResponse = await fetch("https://eastus2.tts.speech.microsoft.com/cognitiveservices/v1", {
+        const voice = voiceSelect.value;
+        const ttsRes = await fetch("/speak", {
           method: "POST",
-          headers: {
-            "Ocp-Apim-Subscription-Key": "CvfyBJcFIkwFoTa7OS23Rcbmp8s1Z8kuunMmoff7YC3GTKHo4MzGJQQJ99BFACHYHv6XJ3w3AAAYACOGIfBa",
-            "Content-Type": "application/ssml+xml",
-            "X-Microsoft-OutputFormat": "audio-16khz-32kbitrate-mono-mp3"
-          },
-          body: `<speak version='1.0' xml:lang='en-US'>
-                   <voice xml:lang='en-US' name='${selectedVoice}'>${cleaned}</voice>
-                 </speak>`
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: reply, voice: voice })
         });
 
-        const ttsBlob = await ttsResponse.blob();
+        const ttsBlob = await ttsRes.blob();
         const audioUrl = URL.createObjectURL(ttsBlob);
         const audio = new Audio(audioUrl);
         audio.play();
@@ -121,16 +88,7 @@
       }
     };
 
-    recognition.onerror = (e) => {
-      log("⚠️ Speech recognition error: " + e.error);
-    };
-
-    recognition.onend = () => {
-      if (isListening) {
-        log("🔄 Recognition ended, restarting...");
-        recognition.start();
-      }
-    };
+    recognition.onerror = (e) => log("⚠️ Speech recognition error: " + e.error);
   </script>
 </body>
 </html>
