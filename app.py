@@ -54,22 +54,26 @@ def speak():
         headers = {
             "Ocp-Apim-Subscription-Key": "CvfyBJcFIkwFoTa7OS23Rcbmp8s1Z8kuunMmoff7YC3GTKHo4MzGJQQJ99BFACHYHv6XJ3w3AAAYACOGIfBa",
             "Content-Type": "application/ssml+xml",
-            "X-Microsoft-OutputFormat": "audio-16khz-32kbitrate-mono-mp3"
+            "X-Microsoft-OutputFormat": "audio-24khz-48kbitrate-mono-mp3"
         }
 
         ssml = f"""
         <speak version='1.0' xml:lang='en-US'>
-            <voice xml:lang='en-US' name='{voice}'>
+            <voice xml:lang='en-US' xml:gender='Male' name='{voice}'>
                 {text}
             </voice>
         </speak>
         """
 
         response = requests.post(tts_url, headers=headers, data=ssml.encode('utf-8'))
+        print("🔊 TTS response status:", response.status_code)
+        print("🎧 TTS audio length:", len(response.content))
         response.raise_for_status()
+
         return response.content, 200, {'Content-Type': 'audio/mpeg'}
 
     except Exception as e:
+        print("❌ TTS error:", str(e))
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
