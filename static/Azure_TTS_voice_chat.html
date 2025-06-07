@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Voice Chat with Azure GPT-4o + Azure TTS</title>
+  <title>Voice Chat Assistant</title>
   <style>
     body { font-family: Arial, sans-serif; padding: 20px; }
-    button, select { font-size: 16px; margin: 5px; }
+    button { font-size: 16px; margin: 5px; }
     #userText, #botResponse { font-weight: bold; }
     #log { margin-top: 20px; background: #f9f9f9; padding: 10px; border: 1px solid #ccc; white-space: pre-wrap; }
   </style>
@@ -12,13 +12,7 @@
 <body>
   <h2>🎤 Voice Chat with Azure GPT-4o + Azure Neural TTS</h2>
   <button id="start">Start Speaking</button>
-  <button id="cancelSpeech">🛑 Stop Talking</button>
-  🔊 Voice: 
-  <select id="voiceSelect">
-    <option value="en-US-AndrewMultilingualNeural">Andrew</option>
-    <option value="en-US-JennyNeural">Jenny</option>
-    <option value="en-GB-RyanNeural">Ryan (UK)</option>
-  </select>
+  <button id="cancelSpeech">🚫 Stop Talking</button>
   <p><strong>You said:</strong> <span id="userText">...</span></p>
   <p><strong>Response:</strong> <span id="botResponse">...</span></p>
   <div id="log"><strong>Debug Log:</strong>\n</div>
@@ -26,7 +20,6 @@
   <script>
     const startBtn = document.getElementById("start");
     const cancelBtn = document.getElementById("cancelSpeech");
-    const voiceSelect = document.getElementById("voiceSelect");
     const userTextSpan = document.getElementById("userText");
     const botResponseSpan = document.getElementById("botResponse");
     const logDiv = document.getElementById("log");
@@ -35,11 +28,49 @@
     const recognition = new SpeechRecognition();
     recognition.lang = "en-US";
     recognition.interimResults = false;
-    recognition.continuous = true;
+    recognition.continuous = false;
 
     function log(msg) {
       logDiv.textContent += `\n${msg}`;
     }
+
+    async function speakAndResume(text) {
+      log("Speaking reply with TTS...");
+      const ttsResponse = await fetch("/speak", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text })
+      });
+      const blob = await ttsResponse.blob();
+      const audioUrl = URL.createObjectURL(blob);
+      const audio = new Audio(audioUrl);
+      audio.onended = () => {
+        log("TTS ended, restarting recognition...");
+        recognition.start();
+      };
+      audio.play();
+    }
+
+    recognition.onresult = async (event) => {
+      const text = event.results[0][0].transcript;
+      userTextSpan.textContent = text;
+      log("Recognized speech: " + text);
+      try {
+        const response = await fetch("/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: text })
+        });
+        const data = await response.json();
+        const reply = data.response || "No response.";
+        botResponseSpan.textContent = reply;
+        await speakAndResume(reply);
+      } catch (err) {
+        log("❌ Error: " + err.message);
+      }
+    };
+
+    recognition.onerror = (e) => log("Speech recognition error: " + e.error);
 
     startBtn.onclick = () => {
       recognition.start();
@@ -49,46 +80,8 @@
     cancelBtn.onclick = () => {
       window.speechSynthesis.cancel();
       recognition.stop();
-      log("🛑 Speech recognition and synthesis stopped.");
+      log("🛑 Speech canceled.");
     };
-
-    recognition.onresult = async (event) => {
-      const text = event.results[event.results.length - 1][0].transcript;
-      userTextSpan.textContent = text;
-      log("Recognized speech: " + text);
-
-      try {
-        const chatRes = await fetch("/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: text })
-        });
-
-        const data = await chatRes.json();
-        log("✅ Received response: " + JSON.stringify(data));
-
-        const reply = data.response || "No response from server.";
-        botResponseSpan.textContent = reply;
-
-        const voice = voiceSelect.value;
-        const ttsRes = await fetch("/speak", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: reply, voice: voice })
-        });
-
-        const ttsBlob = await ttsRes.blob();
-        const audioUrl = URL.createObjectURL(ttsBlob);
-        const audio = new Audio(audioUrl);
-        audio.play();
-
-      } catch (error) {
-        log("❌ Error: " + error.message);
-        botResponseSpan.textContent = "Error occurred.";
-      }
-    };
-
-    recognition.onerror = (e) => log("⚠️ Speech recognition error: " + e.error);
   </script>
 </body>
 </html>
