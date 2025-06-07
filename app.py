@@ -44,11 +44,8 @@ def chat():
 @app.route("/speak", methods=["POST"])
 def speak():
     try:
-        text = request.json.get("text", "")
-        voice = request.json.get("voice", "en-US-AndrewMultilingualNeural")
-
-        if not text:
-            return jsonify({"error": "No text provided"}), 400
+        text = request.data.decode("utf-8")
+        voice = request.args.get("voice", "en-US-AndrewMultilingualNeural")
 
         tts_url = "https://eastus2.tts.speech.microsoft.com/cognitiveservices/v1"
         headers = {
@@ -57,19 +54,8 @@ def speak():
             "X-Microsoft-OutputFormat": "audio-24khz-48kbitrate-mono-mp3"
         }
 
-        ssml = f"""
-        <speak version='1.0' xml:lang='en-US'>
-            <voice xml:lang='en-US' xml:gender='Male' name='{voice}'>
-                {text}
-            </voice>
-        </speak>
-        """
-
-        response = requests.post(tts_url, headers=headers, data=ssml.encode('utf-8'))
-        print("🔊 TTS response status:", response.status_code)
-        print("🎧 TTS audio length:", len(response.content))
+        response = requests.post(tts_url, headers=headers, data=text.encode('utf-8'))
         response.raise_for_status()
-
         return response.content, 200, {'Content-Type': 'audio/mpeg'}
 
     except Exception as e:

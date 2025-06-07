@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Debug Voice Chat with Azure GPT-4o + Neural TTS</title>
+  <title>Voice Chat with Azure GPT-4o + Neural TTS</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -9,9 +9,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
-      height: 100vh;
-      margin: 0;
+      padding: 20px;
     }
     #micBtn {
       background-color: #4CAF50;
@@ -25,35 +23,36 @@
     #micBtn.end {
       background-color: #f44336;
     }
-    #userText, #botResponse {
+    select {
+      font-size: 16px;
+      margin: 10px;
+    }
+    #userText, #botResponse, #log {
       margin-top: 20px;
-      font-size: 18px;
-      font-weight: bold;
       max-width: 600px;
       text-align: center;
-    }
-    #log {
-      margin-top: 20px;
-      background: #fff;
-      padding: 10px;
-      border: 1px solid #ccc;
-      max-width: 600px;
       white-space: pre-wrap;
     }
   </style>
 </head>
 <body>
+  <h2>🎤 Voice Chat with Azure GPT-4o + Azure Neural TTS</h2>
   <button id="micBtn">🎤</button>
+  🔊 Voice:
+  <select id="voiceSelect">
+    <option value="en-US-AndrewMultilingualNeural" selected>Andrew</option>
+    <option value="en-US-JennyNeural">Jenny</option>
+    <option value="en-US-GuyNeural">Guy</option>
+  </select>
+
   <div id="userText">You said: ...</div>
   <div id="botResponse">Response: ...</div>
-  <div id="log"><strong>Debug Log:</strong>\n</div>
+  <div id="log"><strong>Debug Log:</strong></div>
 
   <script>
     const backendUrl = "https://copilot-voice-api-d8cue9bah3ezaegb.centralus-01.azurewebsites.net";
-    const subscriptionKey = "CvfyBJcFIkwFoTa7OS23Rcbmp8s1Z8kuunMmoff7YC3GTKHo4MzGJQQJ99BFACHYHv6XJ3w3AAAYACOGIfBa";
-    const ttsVoice = "en-US-AndrewMultilingualNeural";
-
     const micBtn = document.getElementById("micBtn");
+    const voiceSelect = document.getElementById("voiceSelect");
     const userTextSpan = document.getElementById("userText");
     const botResponseSpan = document.getElementById("botResponse");
     const logDiv = document.getElementById("log");
@@ -71,35 +70,23 @@
       logDiv.textContent += `\n${msg}`;
     }
 
-    async function startConversation() {
-      if (audio) {
-        audio.pause();
-        audio.currentTime = 0;
-      }
-      recognition.start();
-      log("🎙️ Speech recognition started...");
-    }
-
-    function endConversation() {
-      if (audio) {
-        audio.pause();
-        audio.currentTime = 0;
-        log("⛔ Playback stopped.");
-      }
-      recognition.abort();
-      recognizing = false;
-      micBtn.textContent = "🎤";
-      micBtn.classList.remove("end");
-    }
-
     micBtn.onclick = () => {
       if (!recognizing) {
         recognizing = true;
         micBtn.textContent = "⛔";
         micBtn.classList.add("end");
-        startConversation();
+        recognition.start();
+        log("🎙️ Speech recognition started...");
       } else {
-        endConversation();
+        recognition.abort();
+        if (audio) {
+          audio.pause();
+          audio.currentTime = 0;
+        }
+        recognizing = false;
+        micBtn.textContent = "🎤";
+        micBtn.classList.remove("end");
+        log("⛔ Recognition stopped.");
       }
     };
 
@@ -120,34 +107,31 @@
         botResponseSpan.textContent = "Response: " + reply;
         log("🤖 Received reply: " + reply);
 
+        const voice = voiceSelect.value;
         const ssml = `
           <speak version='1.0' xml:lang='en-US'>
-            <voice xml:lang='en-US' xml:gender='Male' name='${ttsVoice}'>
-              ${reply.replace(/[\#\*]+/g, "")}
+            <voice xml:lang='en-US' name='${voice}'>
+              ${reply.replace(/[#*]+/g, '')}
             </voice>
           </speak>`;
 
-        const ttsResponse = await fetch(`${backendUrl}/speak`, {
+        const ttsResponse = await fetch(`${backendUrl}/speak?voice=${voice}`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: ssml })
+          headers: { "Content-Type": "application/ssml+xml" },
+          body: ssml
         });
 
         const ttsBlob = await ttsResponse.blob();
-        const audioUrl = URL.createObjectURL(ttsBlob);
+        audio = new Audio(URL.createObjectURL(ttsBlob));
+        audio.play();
+        log("🔊 Speaking reply with TTS...");
 
-        // 🔊 Open in new tab for debug
-        window.open(audioUrl, "_blank");
-
-        audio = new Audio(audioUrl);
-        audio.oncanplaythrough = () => {
-          log("🔊 Playing response...");
-          audio.play();
+        audio.onended = () => {
+          if (recognizing) {
+            recognition.start();
+            log("🎙️ Listening for next input...");
+          }
         };
-        audio.onerror = () => {
-          log("❌ Audio playback failed.");
-        };
-
       } catch (error) {
         botResponseSpan.textContent = "Response: Error occurred.";
         log("❌ Error: " + error.message);
