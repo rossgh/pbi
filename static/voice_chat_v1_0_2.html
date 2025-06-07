@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Voice Chat with Azure GPT-4o + Neural TTS</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f0f4f8;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+    }
+    #micBtn {
+      background-color: #4CAF50;
+      border: none;
+      color: white;
+      padding: 20px;
+      font-size: 24px;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: background-color 0.3s;
+      margin: 20px;
+    }
+    #micBtn.end {
+      background-color: #f44336;
+    }
+    select {
+      font-size: 16px;
+      padding: 5px;
+      margin-bottom: 10px;
+    }
+    #userText, #botResponse {
+      font-size: 18px;
+      font-weight: bold;
+      max-width: 600px;
+      text-align: center;
+      margin: 10px;
+    }
+    #log {
+      background: #fff;
+      padding: 10px;
+      border: 1px solid #ccc;
+      max-width: 600px;
+      white-space: pre-wrap;
+      margin-top: 20px;
+      font-size: 12px;
+      font-family: monospace;
+    }
+    footer {
+      font-size: 12px;
+      color: gray;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <button id="micBtn">🎤</button>
+  <select id="voiceSelect">
+    <option value="en-US-AndrewMultilingualNeural">Andrew (US)</option>
+    <option value="en-US-JennyNeural">Jenny (US)</option>
+    <option value="en-GB-RyanNeural">Ryan (UK)</option>
+    <option value="en-AU-NatashaNeural">Natasha (AU)</option>
+    <option value="en-IN-NeerjaNeural">Neerja (IN)</option>
+  </select>
+
+  <div id="userText">You said: ...</div>
+  <div id="botResponse">Response: ...</div>
+  <div id="log"><strong>Debug Log:</strong>\n</div>
+  <footer>Version 1.0.2</footer>
+
+  <script>
+    const backendUrl = "https://copilot-voice-api-d8cue9bah3ezaegb.centralus-01.azurewebsites.net";
+    const micBtn = document.getElementById("micBtn");
+    const userTextSpan = document.getElementById("userText");
+    const botResponseSpan = document.getElementById("botResponse");
+    const logDiv = document.getElementById("log");
+    const voiceSelect = document.getElementById("voiceSelect");
+
+    let audio = null;
+    let recognizing = false;
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognition.lang = "en-US";
+    recognition.interimResults = false;
+    recognition.continuous = false;
+
+    function log(msg) {
+      logDiv.textContent += `\n${msg}`;
+    }
+
+    function stopAudio() {
+      if (audio) {
+        audio.pause();
+        audio.currentTime = 0;
+        log("⛔ Playback stopped.");
+      }
+    }
+
+    micBtn.onclick = () => {
+      if (!recognizing) {
+        recognizing = true;
+        micBtn.classList.add("end");
+        micBtn.textContent = "⛔";
+        stopAudio();
+        recognition.start();
+        log("🎙️ Speech recognition started...");
+      } else {
+        recognizing = false;
+        micBtn.classList.remove("end");
+        micBtn.textContent = "🎤";
+        recognition.abort();
+        stopAudio();
+        log("🛑 Conversation ended.");
+      }
+    };
+
+    recognition.onresult = async (event) => {
+      const text = event.results[0][0].transcript;
+      userTextSpan.textContent = "You said: " + text;
+      log("✅ Recognized speech: " + text);
+
+      try {
+        const chatRes = await fetch(`${backendUrl}/chat`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: text })
+        });
+
+        const data = await chatRes.json();
+        const reply = data.response || "No response from server.";
+        botResponseSpan.textContent = "Response: " + reply;
+        log("🤖 Received reply: " + reply);
+
+        const selectedVoice = voiceSelect.value;
+        const ssml = `
+          <speak version='1.0' xml:lang='en-US'>
+            <voice xml:lang='en-US' name='${selectedVoice}'>
+              ${reply.replace(/[#*]+/g, "")}
+            </voice>
+          </speak>`;
+
+        const ttsRes = await fetch(`${backendUrl}/speak`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: ssml, voice: selectedVoice })
+        });
+
+        const ttsBlob = await ttsRes.blob();
+        audio = new Audio(URL.createObjectURL(ttsBlob));
+        audio.play();
+
+        audio.onended = () => {
+          if (recognizing) {
+            recognition.start();
+            log("🎙️ Listening for next input...");
+          }
+        };
+      } catch (error) {
+        botResponseSpan.textContent = "Response: Error occurred.";
+        log("❌ Error: " + error.message);
+      }
+    };
+
+    recognition.onerror = (e) => log("⚠️ Speech recognition error: " + e.error);
+  </script>
+</body>
+</html>
