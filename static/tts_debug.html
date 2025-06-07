@@ -9,7 +9,9 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 20px;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
     }
     #micBtn {
       background-color: #4CAF50;
@@ -19,40 +21,78 @@
       font-size: 24px;
       border-radius: 50%;
       cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    #micBtn:hover {
+      background-color: #45a049;
     }
     #micBtn.end {
       background-color: #f44336;
     }
-    select {
-      font-size: 16px;
-      margin: 10px;
+    #micBtn.end:hover {
+      background-color: #d32f2f;
     }
-    #userText, #botResponse, #log {
+    #wave {
+      width: 100px;
+      height: 20px;
+      margin-top: 10px;
+      display: none;
+    }
+    .wave-bar {
+      display: inline-block;
+      width: 5px;
+      height: 100%;
+      margin: 0 1px;
+      background: #4CAF50;
+      animation: wave 1.2s infinite ease-in-out;
+    }
+    .wave-bar:nth-child(1) { animation-delay: -1.1s; }
+    .wave-bar:nth-child(2) { animation-delay: -1.0s; }
+    .wave-bar:nth-child(3) { animation-delay: -0.9s; }
+    .wave-bar:nth-child(4) { animation-delay: -0.8s; }
+    .wave-bar:nth-child(5) { animation-delay: -0.7s; }
+    @keyframes wave {
+      0%, 100% { transform: scaleY(0.3); }
+      50% { transform: scaleY(1); }
+    }
+    #userText, #botResponse {
       margin-top: 20px;
+      font-size: 18px;
+      font-weight: bold;
       max-width: 600px;
       text-align: center;
+    }
+    #log {
+      margin-top: 20px;
+      background: #fff;
+      padding: 10px;
+      border: 1px solid #ccc;
+      max-width: 600px;
       white-space: pre-wrap;
     }
   </style>
 </head>
 <body>
-  <h2>🎤 Voice Chat with Azure GPT-4o + Azure Neural TTS</h2>
+  <!-- App Version: v1.4 - Follow-up prompt and waveform added -->
   <button id="micBtn">🎤</button>
-  🔊 Voice:
-  <select id="voiceSelect">
-    <option value="en-US-AndrewMultilingualNeural" selected>Andrew</option>
-    <option value="en-US-JennyNeural">Jenny</option>
-    <option value="en-US-GuyNeural">Guy</option>
-  </select>
-
+  <div id="wave">
+    <div class="wave-bar"></div>
+    <div class="wave-bar"></div>
+    <div class="wave-bar"></div>
+    <div class="wave-bar"></div>
+    <div class="wave-bar"></div>
+  </div>
   <div id="userText">You said: ...</div>
   <div id="botResponse">Response: ...</div>
-  <div id="log"><strong>Debug Log:</strong></div>
+  <div id="log"><strong>Debug Log:</strong>\n</div>
 
   <script>
     const backendUrl = "https://copilot-voice-api-d8cue9bah3ezaegb.centralus-01.azurewebsites.net";
+    const subscriptionKey = "CvfyBJcFIkwFoTa7OS23Rcbmp8s1Z8kuunMmoff7YC3GTKHo4MzGJQQJ99BFACHYHv6XJ3w3AAAYACOGIfBa";
+    const ttsVoice = "en-US-AndrewMultilingualNeural";
+
     const micBtn = document.getElementById("micBtn");
-    const voiceSelect = document.getElementById("voiceSelect");
+    const waveDiv = document.getElementById("wave");
     const userTextSpan = document.getElementById("userText");
     const botResponseSpan = document.getElementById("botResponse");
     const logDiv = document.getElementById("log");
@@ -70,23 +110,41 @@
       logDiv.textContent += `\n${msg}`;
     }
 
+    function showWave(show) {
+      waveDiv.style.display = show ? 'flex' : 'none';
+    }
+
+    async function startConversation() {
+      if (audio) {
+        audio.pause();
+        audio.currentTime = 0;
+      }
+      recognition.start();
+      showWave(true);
+      log("🎙️ Speech recognition started...");
+    }
+
+    function endConversation() {
+      if (audio) {
+        audio.pause();
+        audio.currentTime = 0;
+        log("⛔ Playback stopped.");
+      }
+      recognition.abort();
+      recognizing = false;
+      micBtn.textContent = "🎤";
+      micBtn.classList.remove("end");
+      showWave(false);
+    }
+
     micBtn.onclick = () => {
       if (!recognizing) {
         recognizing = true;
         micBtn.textContent = "⛔";
         micBtn.classList.add("end");
-        recognition.start();
-        log("🎙️ Speech recognition started...");
+        startConversation();
       } else {
-        recognition.abort();
-        if (audio) {
-          audio.pause();
-          audio.currentTime = 0;
-        }
-        recognizing = false;
-        micBtn.textContent = "🎤";
-        micBtn.classList.remove("end");
-        log("⛔ Recognition stopped.");
+        endConversation();
       }
     };
 
@@ -107,38 +165,67 @@
         botResponseSpan.textContent = "Response: " + reply;
         log("🤖 Received reply: " + reply);
 
-        const voice = voiceSelect.value;
         const ssml = `
           <speak version='1.0' xml:lang='en-US'>
-            <voice xml:lang='en-US' name='${voice}'>
-              ${reply.replace(/[#*]+/g, '')}
+            <voice xml:lang='en-US' name='${ttsVoice}'>
+              ${reply.replace(/[\#\*]+/g, "")}
             </voice>
           </speak>`;
 
-        const ttsResponse = await fetch(`${backendUrl}/speak?voice=${voice}`, {
+        const ttsResponse = await fetch(`${backendUrl}/speak`, {
           method: "POST",
-          headers: { "Content-Type": "application/ssml+xml" },
-          body: ssml
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: ssml })
         });
 
         const ttsBlob = await ttsResponse.blob();
         audio = new Audio(URL.createObjectURL(ttsBlob));
         audio.play();
-        log("🔊 Speaking reply with TTS...");
 
         audio.onended = () => {
           if (recognizing) {
             recognition.start();
+            showWave(true);
             log("🎙️ Listening for next input...");
           }
         };
+
       } catch (error) {
         botResponseSpan.textContent = "Response: Error occurred.";
         log("❌ Error: " + error.message);
       }
     };
 
-    recognition.onerror = (e) => log("⚠️ Speech recognition error: " + e.error);
+    recognition.onerror = (e) => {
+      log("⚠️ Speech recognition error: " + e.error);
+      if (e.error === "no-speech" && recognizing) {
+        const followUp = "Would you like to continue talking about this?";
+        log("⏳ No speech detected. Asking follow-up...");
+
+        const ssml = `
+          <speak version='1.0' xml:lang='en-US'>
+            <voice xml:lang='en-US' name='${ttsVoice}'>
+              ${followUp}
+            </voice>
+          </speak>`;
+
+        fetch(`${backendUrl}/speak`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: ssml })
+        })
+        .then(res => res.blob())
+        .then(blob => {
+          const followAudio = new Audio(URL.createObjectURL(blob));
+          followAudio.play();
+          followAudio.onended = () => {
+            recognition.start();
+            showWave(true);
+            log("🎙️ Re-listening after follow-up...");
+          };
+        });
+      }
+    };
   </script>
 </body>
 </html>
