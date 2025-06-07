@@ -32,29 +32,6 @@
     #micBtn.end:hover {
       background-color: #d32f2f;
     }
-    #wave {
-      width: 100px;
-      height: 20px;
-      margin-top: 10px;
-      display: none;
-    }
-    .wave-bar {
-      display: inline-block;
-      width: 5px;
-      height: 100%;
-      margin: 0 1px;
-      background: #4CAF50;
-      animation: wave 1.2s infinite ease-in-out;
-    }
-    .wave-bar:nth-child(1) { animation-delay: -1.1s; }
-    .wave-bar:nth-child(2) { animation-delay: -1.0s; }
-    .wave-bar:nth-child(3) { animation-delay: -0.9s; }
-    .wave-bar:nth-child(4) { animation-delay: -0.8s; }
-    .wave-bar:nth-child(5) { animation-delay: -0.7s; }
-    @keyframes wave {
-      0%, 100% { transform: scaleY(0.3); }
-      50% { transform: scaleY(1); }
-    }
     #userText, #botResponse {
       margin-top: 20px;
       font-size: 18px;
@@ -70,18 +47,16 @@
       max-width: 600px;
       white-space: pre-wrap;
     }
+    #statusDisplay {
+      font-size: 16px;
+      margin-top: 10px;
+      color: #333;
+    }
   </style>
 </head>
 <body>
-  <!-- App Version: v1.4 - Follow-up prompt and waveform added -->
   <button id="micBtn">🎤</button>
-  <div id="wave">
-    <div class="wave-bar"></div>
-    <div class="wave-bar"></div>
-    <div class="wave-bar"></div>
-    <div class="wave-bar"></div>
-    <div class="wave-bar"></div>
-  </div>
+  <div id="statusDisplay"></div>
   <div id="userText">You said: ...</div>
   <div id="botResponse">Response: ...</div>
   <div id="log"><strong>Debug Log:</strong>\n</div>
@@ -92,10 +67,10 @@
     const ttsVoice = "en-US-AndrewMultilingualNeural";
 
     const micBtn = document.getElementById("micBtn");
-    const waveDiv = document.getElementById("wave");
     const userTextSpan = document.getElementById("userText");
     const botResponseSpan = document.getElementById("botResponse");
     const logDiv = document.getElementById("log");
+    const statusDisplay = document.getElementById("statusDisplay");
 
     let audio = null;
     let recognizing = false;
@@ -110,17 +85,13 @@
       logDiv.textContent += `\n${msg}`;
     }
 
-    function showWave(show) {
-      waveDiv.style.display = show ? 'flex' : 'none';
-    }
-
     async function startConversation() {
       if (audio) {
         audio.pause();
         audio.currentTime = 0;
       }
       recognition.start();
-      showWave(true);
+      statusDisplay.textContent = "🎧 Listening...";
       log("🎙️ Speech recognition started...");
     }
 
@@ -134,7 +105,7 @@
       recognizing = false;
       micBtn.textContent = "🎤";
       micBtn.classList.remove("end");
-      showWave(false);
+      statusDisplay.textContent = "";
     }
 
     micBtn.onclick = () => {
@@ -152,6 +123,7 @@
       const text = event.results[0][0].transcript;
       userTextSpan.textContent = "You said: " + text;
       log("✅ Recognized speech: " + text);
+      statusDisplay.textContent = "🤖 Thinking...";
 
       try {
         const chatResponse = await fetch(`${backendUrl}/chat`, {
@@ -167,7 +139,7 @@
 
         const ssml = `
           <speak version='1.0' xml:lang='en-US'>
-            <voice xml:lang='en-US' name='${ttsVoice}'>
+            <voice xml:lang='en-US' xml:gender='Male' name='${ttsVoice}'>
               ${reply.replace(/[\#\*]+/g, "")}
             </voice>
           </speak>`;
@@ -175,17 +147,18 @@
         const ttsResponse = await fetch(`${backendUrl}/speak`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: ssml })
+          body: JSON.stringify({ text: ssml, voice: ttsVoice })
         });
 
         const ttsBlob = await ttsResponse.blob();
         audio = new Audio(URL.createObjectURL(ttsBlob));
         audio.play();
 
+        audio.onplay = () => statusDisplay.textContent = "🔊 Speaking...";
         audio.onended = () => {
+          statusDisplay.textContent = "🎧 Listening...";
           if (recognizing) {
             recognition.start();
-            showWave(true);
             log("🎙️ Listening for next input...");
           }
         };
@@ -193,38 +166,13 @@
       } catch (error) {
         botResponseSpan.textContent = "Response: Error occurred.";
         log("❌ Error: " + error.message);
+        statusDisplay.textContent = "⚠️ Error";
       }
     };
 
     recognition.onerror = (e) => {
       log("⚠️ Speech recognition error: " + e.error);
-      if (e.error === "no-speech" && recognizing) {
-        const followUp = "Would you like to continue talking about this?";
-        log("⏳ No speech detected. Asking follow-up...");
-
-        const ssml = `
-          <speak version='1.0' xml:lang='en-US'>
-            <voice xml:lang='en-US' name='${ttsVoice}'>
-              ${followUp}
-            </voice>
-          </speak>`;
-
-        fetch(`${backendUrl}/speak`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: ssml })
-        })
-        .then(res => res.blob())
-        .then(blob => {
-          const followAudio = new Audio(URL.createObjectURL(blob));
-          followAudio.play();
-          followAudio.onended = () => {
-            recognition.start();
-            showWave(true);
-            log("🎙️ Re-listening after follow-up...");
-          };
-        });
-      }
+      statusDisplay.textContent = "⚠️ Error listening";
     };
   </script>
 </body>
