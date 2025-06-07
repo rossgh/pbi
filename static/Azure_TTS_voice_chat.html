@@ -1,20 +1,58 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>🎤 Voice Chat with Azure GPT-4o + Neural TTS</title>
+  <title>Voice Chat with Azure GPT-4o + Neural TTS</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; line-height: 1.6; }
-    button { font-size: 16px; margin: 5px; padding: 10px; }
-    #userText, #botResponse { font-weight: bold; }
-    #log { margin-top: 20px; background: #f4f4f4; padding: 10px; border: 1px solid #ccc; white-space: pre-wrap; }
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f0f4f8;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+    #micBtn {
+      background-color: #4CAF50;
+      border: none;
+      color: white;
+      padding: 20px;
+      font-size: 24px;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    #micBtn:hover {
+      background-color: #45a049;
+    }
+    #micBtn.end {
+      background-color: #f44336;
+    }
+    #micBtn.end:hover {
+      background-color: #d32f2f;
+    }
+    #userText, #botResponse {
+      margin-top: 20px;
+      font-size: 18px;
+      font-weight: bold;
+      max-width: 600px;
+      text-align: center;
+    }
+    #log {
+      margin-top: 20px;
+      background: #fff;
+      padding: 10px;
+      border: 1px solid #ccc;
+      max-width: 600px;
+      white-space: pre-wrap;
+    }
   </style>
 </head>
 <body>
-  <h2>🎤 Voice Chat with Azure GPT-4o + Azure Neural TTS</h2>
-  <button id="start">🎙️ Start Speaking</button>
-  <button id="stop">🚫 Stop Talking</button>
-  <p><strong>You said:</strong> <span id="userText">...</span></p>
-  <p><strong>Response:</strong> <span id="botResponse">...</span></p>
+  <button id="micBtn">🎤</button>
+  <div id="userText">You said: ...</div>
+  <div id="botResponse">Response: ...</div>
   <div id="log"><strong>Debug Log:</strong>\n</div>
 
   <script>
@@ -22,13 +60,13 @@
     const subscriptionKey = "CvfyBJcFIkwFoTa7OS23Rcbmp8s1Z8kuunMmoff7YC3GTKHo4MzGJQQJ99BFACHYHv6XJ3w3AAAYACOGIfBa";
     const ttsVoice = "en-US-AndrewMultilingualNeural";
 
-    const startBtn = document.getElementById("start");
-    const stopBtn = document.getElementById("stop");
+    const micBtn = document.getElementById("micBtn");
     const userTextSpan = document.getElementById("userText");
     const botResponseSpan = document.getElementById("botResponse");
     const logDiv = document.getElementById("log");
 
     let audio = null;
+    let recognizing = false;
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
@@ -40,26 +78,41 @@
       logDiv.textContent += `\n${msg}`;
     }
 
-    startBtn.onclick = () => {
+    async function startConversation() {
       if (audio) {
         audio.pause();
         audio.currentTime = 0;
       }
       recognition.start();
       log("🎙️ Speech recognition started...");
-    };
+    }
 
-    stopBtn.onclick = () => {
+    function endConversation() {
       if (audio) {
         audio.pause();
         audio.currentTime = 0;
-        log("⛔ Playback manually stopped.");
+        log("⛔ Playback stopped.");
+      }
+      recognition.abort();
+      recognizing = false;
+      micBtn.textContent = "🎤";
+      micBtn.classList.remove("end");
+    }
+
+    micBtn.onclick = () => {
+      if (!recognizing) {
+        recognizing = true;
+        micBtn.textContent = "⛔";
+        micBtn.classList.add("end");
+        startConversation();
+      } else {
+        endConversation();
       }
     };
 
     recognition.onresult = async (event) => {
       const text = event.results[0][0].transcript;
-      userTextSpan.textContent = text;
+      userTextSpan.textContent = "You said: " + text;
       log("✅ Recognized speech: " + text);
 
       try {
@@ -71,14 +124,13 @@
 
         const data = await chatResponse.json();
         const reply = data.response || "No response from server.";
-        botResponseSpan.textContent = reply;
+        botResponseSpan.textContent = "Response: " + reply;
         log("🤖 Received reply: " + reply);
 
-        log("🔊 Speaking reply with TTS...");
         const ssml = `
           <speak version='1.0' xml:lang='en-US'>
             <voice xml:lang='en-US' xml:gender='Male' name='${ttsVoice}'>
-              ${reply.replace(/[#*]+/g, "")}
+              ${reply.replace(/[\#\*]+/g, "")}
             </voice>
           </speak>`;
 
@@ -92,8 +144,15 @@
         audio = new Audio(URL.createObjectURL(ttsBlob));
         audio.play();
 
+        audio.onended = () => {
+          if (recognizing) {
+            recognition.start();
+            log("🎙️ Listening for next input...");
+          }
+        };
+
       } catch (error) {
-        botResponseSpan.textContent = "Error occurred.";
+        botResponseSpan.textContent = "Response: Error occurred.";
         log("❌ Error: " + error.message);
       }
     };
