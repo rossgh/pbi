@@ -32,7 +32,7 @@
     #micBtn.end:hover {
       background-color: #d32f2f;
     }
-    #userText, #botResponse {
+    #userText, #botResponse, #voiceSelect {
       margin-top: 20px;
       font-size: 18px;
       font-weight: bold;
@@ -51,6 +51,16 @@
 </head>
 <body>
   <button id="micBtn">🎤</button>
+  <div id="voiceSelect">
+    🔊 Voice:
+    <select id="voiceDropdown">
+      <option value="en-US-AndrewMultilingualNeural" selected>Andrew</option>
+      <option value="en-US-JennyNeural">Jenny</option>
+      <option value="en-US-AriaNeural">Aria</option>
+      <option value="en-GB-RyanNeural">Ryan (UK)</option>
+      <option value="en-AU-NatashaNeural">Natasha (AU)</option>
+    </select>
+  </div>
   <div id="userText">You said: ...</div>
   <div id="botResponse">Response: ...</div>
   <div id="log"><strong>Debug Log:</strong>\n</div>
@@ -58,12 +68,12 @@
   <script>
     const backendUrl = "https://copilot-voice-api-d8cue9bah3ezaegb.centralus-01.azurewebsites.net";
     const subscriptionKey = "CvfyBJcFIkwFoTa7OS23Rcbmp8s1Z8kuunMmoff7YC3GTKHo4MzGJQQJ99BFACHYHv6XJ3w3AAAYACOGIfBa";
-    const ttsVoice = "en-US-AndrewMultilingualNeural";
 
     const micBtn = document.getElementById("micBtn");
     const userTextSpan = document.getElementById("userText");
     const botResponseSpan = document.getElementById("botResponse");
     const logDiv = document.getElementById("log");
+    const voiceDropdown = document.getElementById("voiceDropdown");
 
     let audio = null;
     let recognizing = false;
@@ -127,9 +137,11 @@
         botResponseSpan.textContent = "Response: " + reply;
         log("🤖 Received reply: " + reply);
 
+        const selectedVoice = voiceDropdown.value;
+
         const ssml = `
           <speak version='1.0' xml:lang='en-US'>
-            <voice xml:lang='en-US' xml:gender='Male' name='${ttsVoice}'>
+            <voice xml:lang='en-US' xml:gender='Male' name='${selectedVoice}'>
               ${reply.replace(/[\#\*]+/g, "")}
             </voice>
           </speak>`;
