@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 from openai import AzureOpenAI
 import requests
@@ -56,7 +56,7 @@ def speak():
 
         response = requests.post(tts_url, headers=headers, data=text.encode('utf-8'))
         response.raise_for_status()
-        return response.content, 200, {'Content-Type': 'audio/mpeg'}
+        return Response(response.content, mimetype='audio/mpeg')
 
     except Exception as e:
         print("❌ TTS error:", str(e))
