@@ -47,19 +47,19 @@
       max-width: 600px;
       white-space: pre-wrap;
     }
-    #statusDisplay {
-      font-size: 16px;
+    #version {
+      font-size: 12px;
       margin-top: 10px;
-      color: #333;
+      color: #666;
     }
   </style>
 </head>
 <body>
   <button id="micBtn">🎤</button>
-  <div id="statusDisplay"></div>
   <div id="userText">You said: ...</div>
   <div id="botResponse">Response: ...</div>
   <div id="log"><strong>Debug Log:</strong>\n</div>
+  <div id="version">Version 1.0.0</div>
 
   <script>
     const backendUrl = "https://copilot-voice-api-d8cue9bah3ezaegb.centralus-01.azurewebsites.net";
@@ -70,7 +70,6 @@
     const userTextSpan = document.getElementById("userText");
     const botResponseSpan = document.getElementById("botResponse");
     const logDiv = document.getElementById("log");
-    const statusDisplay = document.getElementById("statusDisplay");
 
     let audio = null;
     let recognizing = false;
@@ -91,7 +90,6 @@
         audio.currentTime = 0;
       }
       recognition.start();
-      statusDisplay.textContent = "🎧 Listening...";
       log("🎙️ Speech recognition started...");
     }
 
@@ -105,7 +103,6 @@
       recognizing = false;
       micBtn.textContent = "🎤";
       micBtn.classList.remove("end");
-      statusDisplay.textContent = "";
     }
 
     micBtn.onclick = () => {
@@ -123,7 +120,6 @@
       const text = event.results[0][0].transcript;
       userTextSpan.textContent = "You said: " + text;
       log("✅ Recognized speech: " + text);
-      statusDisplay.textContent = "🤖 Thinking...";
 
       try {
         const chatResponse = await fetch(`${backendUrl}/chat`, {
@@ -147,16 +143,14 @@
         const ttsResponse = await fetch(`${backendUrl}/speak`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: ssml, voice: ttsVoice })
+          body: JSON.stringify({ text: ssml })
         });
 
         const ttsBlob = await ttsResponse.blob();
         audio = new Audio(URL.createObjectURL(ttsBlob));
         audio.play();
 
-        audio.onplay = () => statusDisplay.textContent = "🔊 Speaking...";
         audio.onended = () => {
-          statusDisplay.textContent = "🎧 Listening...";
           if (recognizing) {
             recognition.start();
             log("🎙️ Listening for next input...");
@@ -166,14 +160,10 @@
       } catch (error) {
         botResponseSpan.textContent = "Response: Error occurred.";
         log("❌ Error: " + error.message);
-        statusDisplay.textContent = "⚠️ Error";
       }
     };
 
-    recognition.onerror = (e) => {
-      log("⚠️ Speech recognition error: " + e.error);
-      statusDisplay.textContent = "⚠️ Error listening";
-    };
+    recognition.onerror = (e) => log("⚠️ Speech recognition error: " + e.error);
   </script>
 </body>
 </html>
