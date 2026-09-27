@@ -1,0 +1,5 @@
+<nav class="subnav">
+  {% for ep, label in [('account.profile','Profile'),('account.security','Security & sign-in'),('account.company','Company'),('account.team','Team')] %}
+  <a href="{{ url_for(ep) }}" class="{{ 'active' if request.endpoint == ep }}">{{ label }}</a>
+  {% endfor %}
+</nav>

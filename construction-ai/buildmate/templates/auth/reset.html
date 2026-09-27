@@ -1,0 +1,13 @@
+{% extends "auth/_layout.html" %}
+{% from "partials/_field.html" import field %}
+{% block title %}Choose a new password{% endblock %}
+{% block auth_body %}
+<h1>Choose a new password</h1>
+<p class="muted">This will sign you out on all other devices.</p>
+<form method="post" novalidate>
+  {{ form.hidden_tag() }}
+  {{ field(form.password, '8+ chars, letters & numbers', 'new-password', autofocus=True) }}
+  {{ field(form.confirm, 'Repeat password', 'new-password') }}
+  <button class="btn btn-block" type="submit">Reset password</button>
+</form>
+{% endblock %}

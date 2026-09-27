@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% from "partials/_field.html" import field %}
+{% block title %}Team{% endblock %}
+{% block content %}
+<h1>Account settings</h1>
+{% include "account/_nav.html" %}
+<div class="stack">
+  {% if current_user.is_company_admin %}
+  <section class="card">
+    <h2>Invite a teammate</h2>
+    <form method="post" novalidate class="invite-form">
+      {{ form.hidden_tag() }}
+      {{ field(form.email, 'colleague@company.com', 'email') }}
+      {{ field(form.role) }}
+      <button class="btn" type="submit">Send invite</button>
+    </form>
+  </section>
+  {% endif %}
+
+  <section class="card">
+    <h2>{{ current_user.company.name }} — {{ members|length }} member{{ 's' if members|length != 1 }}</h2>
+    <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Name</th><th>Email</th><th>Role</th><th></th></tr></thead>
+      <tbody>
+      {% for m in members %}
+        <tr>
+          <td><span class="avatar sm">{{ m.initials }}</span> {{ m.display_name }}{% if m.id == current_user.id %} <span class="muted">(you)</span>{% endif %}</td>
+          <td>{{ m.email }}</td>
+          <td><span class="pill">{{ m.role|capitalize }}</span></td>
+          <td class="actions">
+            {% if current_user.is_company_admin and m.role != 'owner' and m.id != current_user.id %}
+              <form method="post" action="{{ url_for('account.set_role', user_id=m.id) }}" class="inline">
+                {{ action_form.hidden_tag() }}
+                <input type="hidden" name="role" value="{{ 'member' if m.role == 'admin' else 'admin' }}">
+                <button class="btn btn-sm btn-ghost">Make {{ 'member' if m.role == 'admin' else 'admin' }}</button>
+              </form>
+              <form method="post" action="{{ url_for('account.remove_member', user_id=m.id) }}" class="inline" data-confirm="Remove {{ m.display_name }} from the team?">
+                {{ action_form.hidden_tag() }}
+                <button class="btn btn-sm btn-ghost danger-text">Remove</button>
+              </form>
+            {% endif %}
+            {% if current_user.role == 'owner' and m.id != current_user.id %}
+              <form method="post" action="{{ url_for('account.transfer_ownership', user_id=m.id) }}" class="inline" data-confirm="Make {{ m.display_name }} the owner? You will become an admin.">
+                {{ action_form.hidden_tag() }}
+                <button class="btn btn-sm btn-ghost">Make owner</button>
+              </form>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  {% if pending %}
+  <section class="card">
+    <h2>Pending invites</h2>
+    <ul class="list">
+      {% for i in pending %}
+      <li><span>{{ i.email }} <span class="pill">{{ i.role|capitalize }}</span></span>
+        {% if current_user.is_company_admin %}
+        <form method="post" action="{{ url_for('account.revoke_invite', invite_id=i.id) }}" class="inline">
+          {{ action_form.hidden_tag() }}
+          <button class="btn btn-sm btn-ghost">Revoke</button>
+        </form>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+  {% if current_user.role != 'owner' %}
+  <section class="card">
+    <h2>Leave company</h2>
+    <form method="post" action="{{ url_for('account.leave_company') }}" data-confirm="Leave {{ current_user.company.name }}?">
+      {{ action_form.hidden_tag() }}
+      <button class="btn btn-secondary">Leave {{ current_user.company.name }}</button>
+    </form>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}

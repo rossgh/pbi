@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}AI for construction teams{% endblock %}
+{% block main_class %}{% endblock %}
+{% block content %}
+<section class="hero">
+  <div class="container">
+    <span class="eyebrow">For GCs, subs, PMs, supers &amp; estimators</span>
+    <h1>Less paperwork. <span class="hl">More building.</span></h1>
+    <p class="lead">{{ app_name }} drafts RFIs, daily reports, change orders, delay notices and safety talks in minutes — and answers the field questions that slow your jobs down.</p>
+    <div class="hero-cta">
+      <a class="btn btn-lg" href="{{ url_for('auth.register') }}">Create free account</a>
+      <a class="btn btn-lg btn-secondary" href="{{ url_for('auth.login') }}">Sign in</a>
+    </div>
+    {% if oauth_providers %}<p class="muted small">Sign up with {{ oauth_providers|map('capitalize')|join(' or ') }} in one click.</p>{% endif %}
+  </div>
+</section>
+<section class="container">
+  <h2 class="section-title">Tools for the problems you hit every week</h2>
+  <div class="tool-grid">
+    {% for key, t in tools.items() %}
+    <div class="tool-card static"><span class="tool-icon">{{ t.icon }}</span><h3>{{ t.name }}</h3><p>{{ t.summary }}</p></div>
+    {% endfor %}
+    <div class="tool-card static"><span class="tool-icon">🧮</span><h3>Field Calculators</h3><p>Concrete, blocks, drywall, paint, studs — instant quantities with waste.</p></div>
+  </div>
+  <div class="features">
+    <div><h3>🔐 Secure accounts</h3><p>Google &amp; Microsoft sign-in, email verification, password reset, sign-out-everywhere.</p></div>
+    <div><h3>👷 Built for teams</h3><p>Create a company workspace, invite your crew, manage roles and ownership.</p></div>
+    <div><h3>🧠 Knows your context</h3><p>Answers tailored to your trade, region and preferred units.</p></div>
+  </div>
+</section>
+{% endblock %}

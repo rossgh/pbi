@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}{{ tool.name }}{% endblock %}
+{% block content %}
+<a class="back" href="{{ url_for('ai.tools') }}">← All tools</a>
+<section class="card narrow">
+  <h1>{{ tool.icon }} {{ tool.name }}</h1>
+  <p class="muted">{{ tool.summary }}</p>
+  <form method="post" class="tool-form" data-busy="Drafting…">
+    {{ form.hidden_tag() }}
+    {% for f in tool.fields %}
+    <div class="field">
+      <label for="{{ f.name }}">{{ f.label }}{% if f.required %} <span class="req">*</span>{% endif %}</label>
+      {% if f.type == 'textarea' %}
+        <textarea id="{{ f.name }}" name="{{ f.name }}" rows="5" {{ 'required' if f.required }}>{{ values.get(f.name, '') }}</textarea>
+      {% elif f.type == 'select' %}
+        <select id="{{ f.name }}" name="{{ f.name }}">{% for o in f.options %}<option {{ 'selected' if values.get(f.name) == o }}>{{ o }}</option>{% endfor %}</select>
+      {% else %}
+        <input id="{{ f.name }}" name="{{ f.name }}" type="{{ f.type }}" value="{{ values.get(f.name, '') }}" {{ 'required' if f.required }}>
+      {% endif %}
+    </div>
+    {% endfor %}
+    <button class="btn btn-block" type="submit">Generate draft</button>
+  </form>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+  document.querySelectorAll('form[data-busy]').forEach(function (f) {
+    f.addEventListener('submit', function () {
+      var b = f.querySelector('button[type=submit]');
+      b.disabled = true; b.textContent = f.dataset.busy;
+    });
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,32 @@
+{% extends "auth/_layout.html" %}
+{% from "partials/_field.html" import field, oauth_buttons %}
+{% block title %}Create account{% endblock %}
+{% block auth_body %}
+<h1>Create your account</h1>
+{% if invite %}
+<p class="muted">You've been invited to join <strong>{{ invite.company.name }}</strong>.</p>
+{% else %}
+<p class="muted">Free to start. Set up your company workspace in under a minute.</p>
+{% endif %}
+{{ oauth_buttons(providers, 'Sign up') }}
+<form method="post" novalidate>
+  {{ form.hidden_tag() }}
+  {{ field(form.full_name, 'Jordan Rivera', 'name', autofocus=True) }}
+  {{ field(form.email, 'you@company.com', 'email') }}
+  {% if not invite %}
+  <div class="grid-2">
+    {{ field(form.company_name, 'Rivera Builders LLC', 'organization') }}
+    {{ field(form.trade) }}
+  </div>
+  {% else %}
+  {{ field(form.trade) }}
+  {% endif %}
+  <div class="grid-2">
+    {{ field(form.password, '8+ chars, letters & numbers', 'new-password') }}
+    {{ field(form.confirm, 'Repeat password', 'new-password') }}
+  </div>
+  {{ field(form.accept_terms) }}
+  <button class="btn btn-block" type="submit">Create account</button>
+</form>
+<p class="center muted">Already have an account? <a href="{{ url_for('auth.login') }}">Sign in</a></p>
+{% endblock %}

@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="dash-head">
+  <div>
+    <h1>Good to see you, {{ current_user.display_name.split()[0] }}.</h1>
+    <p class="muted">{{ current_user.company.name }} · {{ current_user.trade or current_user.role|capitalize }}</p>
+  </div>
+  <a class="btn" href="{{ url_for('ai.new_chat') }}">💬 Ask the assistant</a>
+</div>
+
+{% if provider == 'demo' %}
+<div class="notice">Running in <strong>demo mode</strong>: tools produce template drafts. Add <code>ANTHROPIC_API_KEY</code> (or an OpenAI/Azure key) to the server's environment for full AI answers.</div>
+{% endif %}
+
+{% set checklist = [
+  (current_user.email_verified, 'Confirm your email', url_for('account.profile')),
+  (current_user.trade or current_user.job_title, 'Add your role to your profile', url_for('account.profile')),
+  (current_user.company.members.count() > 1, 'Invite your team', url_for('account.team')),
+  (recent|length > 0, 'Run your first AI tool', url_for('ai.tools')),
+] %}
+{% if checklist|rejectattr(0)|list %}
+<section class="card getting-started">
+  <h2>Getting started</h2>
+  <ul class="checklist">
+    {% for done, label, href in checklist %}
+    <li class="{{ 'done' if done }}"><span class="box">{{ '✓' if done }}</span><a href="{{ href }}">{{ label }}</a></li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+<h2 class="section-title">AI tools</h2>
+<div class="tool-grid">
+  {% for key, t in tools.items() %}
+  <a class="tool-card" href="{{ url_for('ai.tool', tool_key=key) }}"><span class="tool-icon">{{ t.icon }}</span><h3>{{ t.name }}</h3><p>{{ t.summary }}</p></a>
+  {% endfor %}
+  <a class="tool-card" href="{{ url_for('ai.calculators') }}"><span class="tool-icon">🧮</span><h3>Field Calculators</h3><p>Concrete, blocks, drywall, paint, studs — instant quantities.</p></a>
+</div>
+
+<h2 class="section-title">Recent work</h2>
+{% if recent %}
+<ul class="list card">
+  {% for c in recent %}
+  <li><a href="{{ url_for('ai.chat', conv_id=c.id) }}">{{ tools[c.tool].icon if c.tool in tools }} {{ c.title }}</a><span class="muted small">{{ c.updated_at.strftime('%b %d, %H:%M') }}</span></li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="muted">Nothing yet — pick a tool above to create your first document.</p>
+{% endif %}
+{% endblock %}

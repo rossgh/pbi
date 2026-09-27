@@ -1,0 +1,18 @@
+{% extends "auth/_layout.html" %}
+{% from "partials/_field.html" import field %}
+{% block title %}Set up your company{% endblock %}
+{% block auth_body %}
+<h1>Set up your company</h1>
+<p class="muted">This tailors the AI to the work you do. You can invite your team next.</p>
+<form method="post" novalidate>
+  {{ form.hidden_tag() }}
+  {{ field(form.company_name, 'Rivera Builders LLC', 'organization', autofocus=True) }}
+  {{ field(form.industry_focus) }}
+  <div class="grid-2">
+    {{ field(form.size) }}
+    {{ field(form.trade) }}
+  </div>
+  <button class="btn btn-block" type="submit">Continue</button>
+</form>
+<p class="muted small">Got an invite from your company? Open the link in that email instead.</p>
+{% endblock %}

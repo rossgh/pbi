@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% from "partials/_field.html" import field %}
+{% block title %}Security{% endblock %}
+{% block content %}
+<h1>Account settings</h1>
+{% include "account/_nav.html" %}
+<div class="stack">
+  <section class="card">
+    <h2>{{ 'Change password' if current_user.has_password else 'Set a password' }}</h2>
+    {% if not current_user.has_password %}<p class="muted">You sign in with a connected account. Add a password to also sign in with your email.</p>{% endif %}
+    <form method="post" novalidate>
+      {{ pw_form.hidden_tag() }}
+      {% if current_user.has_password %}{{ field(pw_form.current_password, '', 'current-password') }}{% endif %}
+      <div class="grid-2">
+        {{ field(pw_form.password, '8+ chars, letters & numbers', 'new-password') }}
+        {{ field(pw_form.confirm, '', 'new-password') }}
+      </div>
+      <button class="btn" type="submit" name="pw-submit" value="1">{{ 'Update password' if current_user.has_password else 'Set password' }}</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>Connected sign-in methods</h2>
+    <ul class="list">
+      <li><span>✉️ Email &amp; password</span>{% if current_user.has_password %}<span class="pill pill-ok">Enabled</span>{% else %}<span class="pill">Not set</span>{% endif %}</li>
+      {% for p, label in provider_labels.items() %}
+      <li>
+        <span>{{ label }}</span>
+        {% if p in linked %}
+          <form method="post" action="{{ url_for('account.unlink', provider=p) }}" class="inline">
+            {{ action_form.hidden_tag() }}
+            <span class="pill pill-ok">Connected</span>
+            <button class="btn btn-sm btn-ghost" type="submit">Disconnect</button>
+          </form>
+        {% elif p in providers %}
+          <a class="btn btn-sm btn-secondary" href="{{ url_for('auth.oauth_start', provider=p) }}">Connect</a>
+        {% else %}
+          <span class="muted small">Not configured on this server</span>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <section class="card">
+    <h2>Sessions</h2>
+    <p class="muted">Lost a phone or used a shared computer? Sign out everywhere, including this device.</p>
+    <form method="post" action="{{ url_for('account.signout_everywhere') }}">
+      {{ action_form.hidden_tag() }}
+      <button class="btn btn-secondary" type="submit">Sign out of all devices</button>
+    </form>
+  </section>
+
+  <section class="card danger">
+    <h2>Delete account</h2>
+    <p class="muted">Permanently deletes your profile and AI conversations. If you own a company with other members, transfer ownership first.</p>
+    <form method="post" action="{{ url_for('account.delete_account') }}" novalidate data-confirm="Delete your account permanently?">
+      {{ delete_form.hidden_tag() }}
+      <div class="grid-2">
+        {{ field(delete_form.confirm_text, 'DELETE') }}
+        {% if current_user.has_password %}{{ field(delete_form.password, '', 'current-password') }}{% endif %}
+      </div>
+      <button class="btn btn-danger" type="submit">Delete my account</button>
+    </form>
+  </section>
+</div>
+{% endblock %}

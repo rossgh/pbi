@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block title %}Calculators{% endblock %}
+{% block content %}
+<h1>Field calculators</h1>
+<p class="muted">Quick quantities with waste. Units:
+  <select id="units" class="inline-select">
+    <option value="imperial" {{ 'selected' if current_user.units != 'metric' }}>Imperial (ft / in)</option>
+    <option value="metric" {{ 'selected' if current_user.units == 'metric' }}>Metric (m / mm)</option>
+  </select>
+</p>
+<div class="calc-grid">
+  <section class="card calc" data-calc="concrete">
+    <h2>🧱 Concrete slab / footing</h2>
+    <div class="grid-3">
+      <label>Length <span data-u="len"></span><input type="number" step="any" name="l" value="30"></label>
+      <label>Width <span data-u="len"></span><input type="number" step="any" name="w" value="40"></label>
+      <label>Thickness <span data-u="thick"></span><input type="number" step="any" name="t" value="4"></label>
+    </div>
+    <label>Waste %<input type="number" step="any" name="waste" value="10"></label>
+    <output></output>
+  </section>
+
+  <section class="card calc" data-calc="block">
+    <h2>🧱 Block / brick wall</h2>
+    <div class="grid-3">
+      <label>Wall length <span data-u="len"></span><input type="number" step="any" name="l" value="50"></label>
+      <label>Wall height <span data-u="len"></span><input type="number" step="any" name="h" value="8"></label>
+      <label>Openings area <span data-u="area"></span><input type="number" step="any" name="open" value="0"></label>
+    </div>
+    <label>Unit<select name="unit"><option value="cmu">CMU 8×16 in / 390×190 mm</option><option value="brick">Modular brick</option></select></label>
+    <label>Waste %<input type="number" step="any" name="waste" value="5"></label>
+    <output></output>
+  </section>
+
+  <section class="card calc" data-calc="drywall">
+    <h2>🪚 Drywall sheets</h2>
+    <div class="grid-3">
+      <label>Total wall length <span data-u="len"></span><input type="number" step="any" name="l" value="120"></label>
+      <label>Wall height <span data-u="len"></span><input type="number" step="any" name="h" value="8"></label>
+      <label>Ceiling area <span data-u="area"></span><input type="number" step="any" name="ceil" value="0"></label>
+    </div>
+    <label>Sheet<select name="sheet"><option value="32">4×8 ft (1.2×2.4 m)</option><option value="48">4×12 ft (1.2×3.6 m)</option></select></label>
+    <label>Waste %<input type="number" step="any" name="waste" value="12"></label>
+    <output></output>
+  </section>
+
+  <section class="card calc" data-calc="paint">
+    <h2>🎨 Paint</h2>
+    <div class="grid-3">
+      <label>Area to paint <span data-u="area"></span><input type="number" step="any" name="a" value="1200"></label>
+      <label>Coats<input type="number" step="1" name="coats" value="2"></label>
+      <label>Coverage <span data-u="cov"></span><input type="number" step="any" name="cov" value="350"></label>
+    </div>
+    <output></output>
+  </section>
+
+  <section class="card calc" data-calc="studs">
+    <h2>🪵 Wall studs</h2>
+    <div class="grid-3">
+      <label>Wall length <span data-u="len"></span><input type="number" step="any" name="l" value="40"></label>
+      <label>Spacing <span data-u="thick"></span><input type="number" step="any" name="s" value="16"></label>
+      <label>Corners + openings<input type="number" step="1" name="extras" value="4"></label>
+    </div>
+    <output></output>
+  </section>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+  var unitsSel = document.getElementById('units');
+  var U = {
+    imperial: { len: '(ft)', thick: '(in)', area: '(ft²)', cov: '(ft²/gal)' },
+    metric: { len: '(m)', thick: '(mm)', area: '(m²)', cov: '(m²/L)' }
+  };
+  var DEFAULTS = {
+    imperial: { concrete: { l: 30, w: 40, t: 4 }, block: { l: 50, h: 8 }, drywall: { l: 120, h: 8 }, paint: { a: 1200, cov: 350 }, studs: { l: 40, s: 16 } },
+    metric: { concrete: { l: 9, w: 12, t: 100 }, block: { l: 15, h: 2.4 }, drywall: { l: 36, h: 2.4 }, paint: { a: 110, cov: 10 }, studs: { l: 12, s: 400 } }
+  };
+  function n(card, name) { var el = card.querySelector('[name=' + name + ']'); return parseFloat(el.value) || 0; }
+  function fmt(x, d) { return x.toLocaleString(undefined, { maximumFractionDigits: d === undefined ? 2 : d }); }
+  var CALC = {
+    concrete: function (c, m) {
+      var w = 1 + n(c, 'waste') / 100;
+      if (m) { var v = n(c, 'l') * n(c, 'w') * n(c, 't') / 1000; return 'Volume: <b>' + fmt(v) + ' m³</b> · with waste: <b>' + fmt(v * w) + ' m³</b><br>25 kg bags (~0.011 m³ each): <b>' + Math.ceil(v * w / 0.011) + '</b>'; }
+      var cf = n(c, 'l') * n(c, 'w') * n(c, 't') / 12, yd = cf / 27;
+      return 'Volume: <b>' + fmt(cf) + ' ft³ = ' + fmt(yd) + ' yd³</b> · with waste: <b>' + fmt(yd * w) + ' yd³</b><br>80 lb bags (0.6 ft³ each): <b>' + Math.ceil(cf * w / 0.6) + '</b>';
+    },
+    block: function (c, m) {
+      var area = n(c, 'l') * n(c, 'h') - n(c, 'open');
+      var face = c.querySelector('[name=unit]').value === 'cmu' ? (m ? 0.08 : 0.889) : (m ? 0.0169 : 0.1485);
+      var qty = Math.ceil(area / face * (1 + n(c, 'waste') / 100));
+      return 'Net wall area: <b>' + fmt(area) + (m ? ' m²' : ' ft²') + '</b><br>Units needed: <b>' + qty + '</b>';
+    },
+    drywall: function (c, m) {
+      var area = n(c, 'l') * n(c, 'h') + n(c, 'ceil');
+      var sheet = parseFloat(c.querySelector('[name=sheet]').value);
+      if (m) sheet = sheet === 32 ? 2.88 : 4.32;
+      var sheets = Math.ceil(area / sheet * (1 + n(c, 'waste') / 100));
+      return 'Area: <b>' + fmt(area) + (m ? ' m²' : ' ft²') + '</b><br>Sheets: <b>' + sheets + '</b> · joint compound ≈ <b>' + (m ? fmt(area * 0.07, 1) + ' kg' : fmt(area * 0.053, 1) + ' lb') + '</b>';
+    },
+    paint: function (c, m) {
+      var q = n(c, 'a') * n(c, 'coats') / (n(c, 'cov') || 1);
+      return 'Paint needed: <b>' + fmt(q, 1) + (m ? ' L' : ' gal') + '</b> → buy <b>' + Math.ceil(q) + (m ? ' L' : ' gal') + '</b>';
+    },
+    studs: function (c, m) {
+      var lenSmall = m ? n(c, 'l') * 1000 : n(c, 'l') * 12;
+      var q = Math.ceil(lenSmall / (n(c, 's') || 1)) + 1 + 2 * n(c, 'extras');
+      var plates = Math.ceil(n(c, 'l') * 3 / (m ? 4.8 : 16));
+      return 'Studs: <b>' + q + '</b> · plates (double top + bottom, ' + (m ? '4.8 m' : '16 ft') + ' lengths): <b>' + plates + '</b>';
+    }
+  };
+  function run() {
+    var m = unitsSel.value === 'metric';
+    document.querySelectorAll('[data-u]').forEach(function (s) { s.textContent = U[unitsSel.value][s.dataset.u]; });
+    document.querySelectorAll('.calc').forEach(function (c) { c.querySelector('output').innerHTML = CALC[c.dataset.calc](c, m); });
+  }
+  unitsSel.addEventListener('change', function () {
+    var d = DEFAULTS[unitsSel.value];
+    Object.keys(d).forEach(function (k) {
+      var card = document.querySelector('[data-calc=' + k + ']');
+      Object.keys(d[k]).forEach(function (f) { card.querySelector('[name=' + f + ']').value = d[k][f]; });
+    });
+    run();
+  });
+  document.addEventListener('input', run);
+  if (unitsSel.value === 'metric') unitsSel.dispatchEvent(new Event('change')); else run();
+})();
+</script>
+{% endblock %}

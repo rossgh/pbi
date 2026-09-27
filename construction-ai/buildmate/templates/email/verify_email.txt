@@ -1,0 +1,9 @@
+Hi {{ user.display_name }},
+
+Please confirm your email address for {{ app_name }} by opening this link:
+
+{{ link }}
+
+The link expires in 48 hours. If you didn't request this, you can ignore this email.
+
+— The {{ app_name }} team

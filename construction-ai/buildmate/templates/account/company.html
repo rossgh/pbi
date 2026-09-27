@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% from "partials/_field.html" import field %}
+{% block title %}Company{% endblock %}
+{% block content %}
+<h1>Account settings</h1>
+{% include "account/_nav.html" %}
+<section class="card">
+  <h2>Company profile</h2>
+  <p class="muted">The AI uses this to tailor answers (e.g. regional codes, residential vs. commercial).</p>
+  {% set ro = not current_user.is_company_admin %}
+  <form method="post" novalidate>
+    {{ form.hidden_tag() }}
+    <fieldset {{ 'disabled' if ro }}>
+      <div class="grid-2">
+        {{ field(form.name, '', 'organization') }}
+        {{ field(form.industry_focus) }}
+        {{ field(form.size) }}
+        {{ field(form.country, 'e.g. United States — Texas') }}
+      </div>
+      {% if not ro %}<button class="btn" type="submit">Save company</button>{% endif %}
+    </fieldset>
+    {% if ro %}<p class="muted small">Only owners and admins can edit company details.</p>{% endif %}
+  </form>
+</section>
+{% endblock %}

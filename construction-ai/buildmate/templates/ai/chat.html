@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}{{ conv.title if conv else 'Assistant' }}{% endblock %}
+{% block body_class %}chat-page{% endblock %}
+{% block main_class %}chat-main{% endblock %}
+{% block footer %}{% endblock %}
+{% block content %}
+<div class="chat-layout">
+  <aside class="chat-side">
+    <a class="btn btn-block" href="{{ url_for('ai.new_chat') }}">+ New chat</a>
+    <a class="btn btn-block btn-secondary" href="{{ url_for('ai.tools') }}">AI tools</a>
+    <h4>History</h4>
+    <ul class="conv-list">
+      {% for c in conversations %}
+      <li class="{{ 'active' if conv and c.id == conv.id }}"><a href="{{ url_for('ai.chat', conv_id=c.id) }}" title="{{ c.title }}">{{ tools[c.tool].icon if c.tool in tools }} {{ c.title }}</a></li>
+      {% else %}
+      <li class="muted small">No conversations yet.</li>
+      {% endfor %}
+    </ul>
+  </aside>
+  <section class="chat-panel">
+    <div class="chat-head">
+      <div>
+        <strong>{{ conv.title if conv else 'Site Assistant' }}</strong>
+        {% if provider == 'demo' %}<span class="pill pill-warn">Demo mode</span>{% else %}<span class="pill pill-ok">AI: {{ provider }}</span>{% endif %}
+      </div>
+      {% if conv %}
+      <form method="post" action="{{ url_for('ai.delete_chat', conv_id=conv.id) }}" data-confirm="Delete this conversation?">
+        {{ action_form.hidden_tag() }}
+        <button class="btn btn-sm btn-ghost">Delete</button>
+      </form>
+      {% endif %}
+    </div>
+    <div id="messages" class="messages">
+      {% if conv %}
+        {% for m in conv.messages %}
+        <div class="msg msg-{{ m.role }}">
+          <div class="bubble">{% if m.role == 'assistant' %}{{ m.content|markdown }}<button class="copy" type="button" title="Copy">Copy</button>{% else %}<div class="plain">{{ m.content }}</div>{% endif %}</div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="empty-chat">
+          <h2>How can I help on site today?</h2>
+          <div class="suggestions">
+            {% for s in [
+              'How many yards of concrete for a 30×40 ft slab, 4 in thick?',
+              'What fall protection do we need for a roof at 18 ft?',
+              'Our steel delivery is 2 weeks late — what should I do?',
+              'Write a polite reminder to a client about an overdue invoice',
+            ] %}<button type="button" class="chip" data-suggest="{{ s }}">{{ s }}</button>{% endfor %}
+          </div>
+        </div>
+      {% endif %}
+    </div>
+    <form id="composer" class="composer" data-conversation="{{ conv.id if conv else '' }}" data-send-url="{{ url_for('ai.api_send') }}">
+      <textarea id="input" rows="2" placeholder="Ask about codes, methods, schedules, costs…  (Enter to send, Shift+Enter for new line)" required></textarea>
+      <button class="btn" type="submit" id="send">Send</button>
+    </form>
+  </section>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/chat.js') }}"></script>{% endblock %}

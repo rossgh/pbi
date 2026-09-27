@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block body_class %}auth-page{% endblock %}
+{% block main_class %}auth-wrap{% endblock %}
+{% block content %}
+<div class="auth-grid">
+  <aside class="auth-hero">
+    <div>
+      <h2>AI that speaks construction.</h2>
+      <ul class="ticks">
+        <li>RFIs, change orders &amp; delay notices in minutes</li>
+        <li>Daily reports from rough site notes</li>
+        <li>Safety JHAs &amp; toolbox talks for any task</li>
+        <li>Takeoffs, punch lists and contract reviews</li>
+      </ul>
+    </div>
+    <p class="muted">Built for GCs, subs, PMs, supers, estimators and safety teams.</p>
+  </aside>
+  <section class="card auth-card">
+    {% block auth_body %}{% endblock %}
+  </section>
+</div>
+{% endblock %}
+{% block footer %}{% endblock %}

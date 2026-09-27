@@ -1,0 +1,11 @@
+Hi,
+
+{{ inviter.display_name }} invited you to join {{ company.name }} on {{ app_name }}, the AI assistant for construction teams.
+
+Accept the invite:
+
+{{ link }}
+
+This invite expires in 7 days.
+
+— The {{ app_name }} team

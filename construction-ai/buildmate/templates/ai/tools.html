@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}AI Tools{% endblock %}
+{% block content %}
+<h1>AI tools</h1>
+<p class="muted">Fill in what you know — the AI drafts the document, then you can refine it by chatting.</p>
+{% if provider == 'demo' %}<div class="notice">Demo mode — template drafts only until an AI key is configured.</div>{% endif %}
+<div class="tool-grid">
+  {% for key, t in tools.items() %}
+  <a class="tool-card" href="{{ url_for('ai.tool', tool_key=key) }}"><span class="tool-icon">{{ t.icon }}</span><h3>{{ t.name }}</h3><p>{{ t.summary }}</p></a>
+  {% endfor %}
+  <a class="tool-card" href="{{ url_for('ai.calculators') }}"><span class="tool-icon">🧮</span><h3>Field Calculators</h3><p>Concrete, blocks, drywall, paint, studs — instant quantities.</p></a>
+</div>
+{% endblock %}

@@ -1,0 +1,19 @@
+{% extends "auth/_layout.html" %}
+{% from "partials/_field.html" import field, oauth_buttons %}
+{% block title %}Sign in{% endblock %}
+{% block auth_body %}
+<h1>Welcome back</h1>
+<p class="muted">Sign in to your {{ app_name }} account.</p>
+{{ oauth_buttons(providers) }}
+<form method="post" novalidate>
+  {{ form.hidden_tag() }}
+  {{ field(form.email, 'you@company.com', 'email', autofocus=True) }}
+  {{ field(form.password, '••••••••', 'current-password') }}
+  <div class="row-between">
+    {{ field(form.remember) }}
+    <a href="{{ url_for('auth.forgot_password') }}">Forgot password?</a>
+  </div>
+  <button class="btn btn-block" type="submit">Sign in</button>
+</form>
+<p class="center muted">New here? <a href="{{ url_for('auth.register') }}">Create an account</a></p>
+{% endblock %}

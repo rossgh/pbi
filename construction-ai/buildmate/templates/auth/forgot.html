@@ -1,0 +1,13 @@
+{% extends "auth/_layout.html" %}
+{% from "partials/_field.html" import field %}
+{% block title %}Reset password{% endblock %}
+{% block auth_body %}
+<h1>Forgot your password?</h1>
+<p class="muted">Enter your email and we'll send you a link to set a new one. The link expires in 1 hour.</p>
+<form method="post" novalidate>
+  {{ form.hidden_tag() }}
+  {{ field(form.email, 'you@company.com', 'email', autofocus=True) }}
+  <button class="btn btn-block" type="submit">Send reset link</button>
+</form>
+<p class="center muted"><a href="{{ url_for('auth.login') }}">Back to sign in</a></p>
+{% endblock %}

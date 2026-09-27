@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% from "partials/_field.html" import field %}
+{% block title %}Profile{% endblock %}
+{% block content %}
+<h1>Account settings</h1>
+{% include "account/_nav.html" %}
+<div class="stack">
+  <section class="card">
+    <div class="profile-head">
+      <span class="avatar lg">{{ current_user.initials }}</span>
+      <div>
+        <h2>{{ current_user.display_name }}</h2>
+        <p class="muted">{{ current_user.job_title or current_user.trade or 'Add your role' }}{% if current_user.company %} · {{ current_user.company.name }}{% endif %}</p>
+      </div>
+    </div>
+    <form method="post" novalidate>
+      {{ form.hidden_tag() }}
+      <div class="grid-2">
+        {{ field(form.full_name, '', 'name') }}
+        {{ field(form.job_title, 'e.g. Senior Project Manager') }}
+        {{ field(form.trade) }}
+        {{ field(form.phone, '+1 555 123 4567', 'tel') }}
+        {{ field(form.units, hint='Used by the AI and calculators.') }}
+      </div>
+      <button class="btn" type="submit" name="submit" value="1">Save profile</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>Email address</h2>
+    <p>Current: <strong>{{ current_user.email }}</strong>
+      {% if current_user.email_verified %}<span class="pill pill-ok">Verified</span>{% else %}<span class="pill pill-warn">Unverified</span>{% endif %}
+    </p>
+    {% if current_user.pending_email %}<p class="muted">Pending change to <strong>{{ current_user.pending_email }}</strong> — check that inbox for the confirmation link.</p>{% endif %}
+    <form method="post" action="{{ url_for('account.change_email') }}" novalidate>
+      {{ email_form.hidden_tag() }}
+      <div class="grid-2">
+        {{ field(email_form.new_email, 'new@company.com', 'email') }}
+        {% if current_user.has_password %}{{ field(email_form.password, '', 'current-password') }}{% endif %}
+      </div>
+      <button class="btn btn-secondary" type="submit">Change email</button>
+    </form>
+  </section>
+</div>
+{% endblock %}
